@@ -4,7 +4,9 @@ import Foundation
 extension SettingsStore {
     var claudeUsageDataSource: ClaudeUsageDataSource {
         get {
-            let source = self.configSnapshot.providerConfig(for: .claude)?.source
+            let config = self.configSnapshot.providerConfig(for: .claude)
+            if config?.claudeStatusLineSelected == true { return .statusLine }
+            let source = config?.source
             return Self.claudeUsageDataSource(from: source)
         }
         set {
@@ -14,9 +16,11 @@ extension SettingsStore {
             case .oauth: .oauth
             case .web: .web
             case .cli: .cli
+            case .statusLine: .auto
             }
             self.updateProviderConfig(provider: .claude) { entry in
                 entry.source = source
+                entry.claudeStatusLineSelected = newValue == .statusLine
             }
             self.logProviderModeChange(provider: .claude, field: "usageSource", value: newValue.rawValue)
             if newValue != .cli {
@@ -28,6 +32,16 @@ extension SettingsStore {
     var claudeCookieHeader: String {
         get { self[providerConfig: .claude, field: .cookieHeader] }
         set { self[providerConfig: .claude, field: .cookieHeader] = newValue }
+    }
+
+    var claudeStatusLineAutoFallback: Bool {
+        get { self.configSnapshot.providerConfig(for: .claude)?.claudeStatusLineAutoFallback ?? false }
+        set { self.updateProviderConfig(provider: .claude) { $0.claudeStatusLineAutoFallback = newValue } }
+    }
+
+    var claudeStatusLineCachePath: String {
+        get { self.configSnapshot.providerConfig(for: .claude)?.claudeStatusLineCachePath ?? "" }
+        set { self.updateProviderConfig(provider: .claude) { $0.claudeStatusLineCachePath = newValue } }
     }
 
     var claudeCookieSource: ProviderCookieSource {
@@ -98,7 +112,9 @@ extension SettingsStore {
             manualCookieHeader: self.claudeSnapshotCookieHeader(
                 routing: routing,
                 hasSelectedAccount: account != nil),
-            organizationID: account?.sanitizedOrganizationID)
+            organizationID: account?.sanitizedOrganizationID,
+            statusLineAutoFallback: self.claudeStatusLineAutoFallback,
+            statusLineCachePath: self.claudeStatusLineCachePath)
     }
 
     private static func claudeUsageDataSource(from source: ProviderSourceMode?) -> ClaudeUsageDataSource {

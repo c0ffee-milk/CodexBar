@@ -7,6 +7,7 @@ public struct ClaudeSourcePlanningInput: Equatable, Sendable {
     public let hasWebSession: Bool
     public let hasCLI: Bool
     public let hasOAuthCredentials: Bool
+    public let statusLineEnabled: Bool
 
     public init(
         runtime: ProviderRuntime,
@@ -14,7 +15,8 @@ public struct ClaudeSourcePlanningInput: Equatable, Sendable {
         webExtrasEnabled: Bool,
         hasWebSession: Bool,
         hasCLI: Bool,
-        hasOAuthCredentials: Bool)
+        hasOAuthCredentials: Bool,
+        statusLineEnabled: Bool = false)
     {
         self.runtime = runtime
         self.selectedDataSource = selectedDataSource
@@ -22,6 +24,7 @@ public struct ClaudeSourcePlanningInput: Equatable, Sendable {
         self.hasWebSession = hasWebSession
         self.hasCLI = hasCLI
         self.hasOAuthCredentials = hasOAuthCredentials
+        self.statusLineEnabled = statusLineEnabled
     }
 }
 
@@ -33,6 +36,7 @@ public enum ClaudeSourcePlanReason: String, Equatable, Sendable {
     case appAutoFallbackWeb = "app-auto-fallback-web"
     case cliAutoPreferredWeb = "cli-auto-preferred-web"
     case cliAutoFallbackCLI = "cli-auto-fallback-cli"
+    case autoFallbackStatusLine = "auto-fallback-statusline"
 }
 
 public struct ClaudeFetchPlanStep: Equatable, Sendable {
@@ -74,7 +78,7 @@ public struct ClaudeFetchPlan: Equatable, Sendable {
             self.availableSteps.first
         case .oauth where self.input.runtime == .app:
             self.availableSteps.first
-        case .api, .oauth, .web, .cli:
+        case .api, .oauth, .web, .cli, .statusLine:
             self.orderedSteps.first
         }
     }
@@ -83,7 +87,7 @@ public struct ClaudeFetchPlan: Equatable, Sendable {
         switch self.input.selectedDataSource {
         case .auto:
             self.availableSteps
-        case .api, .oauth, .web, .cli:
+        case .api, .oauth, .web, .cli, .statusLine:
             self.orderedSteps
         }
     }
@@ -174,7 +178,7 @@ public enum ClaudeSourcePlanner {
     private static func makeSteps(input: ClaudeSourcePlanningInput) -> [ClaudeFetchPlanStep] {
         switch input.selectedDataSource {
         case .auto:
-            switch input.runtime {
+            let steps: [ClaudeFetchPlanStep] = switch input.runtime {
             case .app:
                 [
                     self.step(.oauth, reason: .appAutoPreferredOAuth, input: input),
@@ -187,10 +191,12 @@ public enum ClaudeSourcePlanner {
                     self.step(.cli, reason: .cliAutoFallbackCLI, input: input),
                 ]
             }
+            return steps + (input.statusLineEnabled
+                ? [self.step(.statusLine, reason: .autoFallbackStatusLine, input: input)] : [])
         case .api:
-            [self.step(.api, reason: .explicitSourceSelection, input: input)]
+            return [self.step(.api, reason: .explicitSourceSelection, input: input)]
         case .oauth:
-            switch input.runtime {
+            return switch input.runtime {
             case .app:
                 [
                     self.step(.oauth, reason: .explicitSourceSelection, input: input),
@@ -200,9 +206,11 @@ public enum ClaudeSourcePlanner {
                 [self.step(.oauth, reason: .explicitSourceSelection, input: input)]
             }
         case .web:
-            [self.step(.web, reason: .explicitSourceSelection, input: input)]
+            return [self.step(.web, reason: .explicitSourceSelection, input: input)]
         case .cli:
-            [self.step(.cli, reason: .explicitSourceSelection, input: input)]
+            return [self.step(.cli, reason: .explicitSourceSelection, input: input)]
+        case .statusLine:
+            return [self.step(.statusLine, reason: .explicitSourceSelection, input: input)]
         }
     }
 
@@ -230,6 +238,8 @@ public enum ClaudeSourcePlanner {
             input.hasWebSession
         case .cli:
             input.hasCLI
+        case .statusLine:
+            true
         }
     }
 }

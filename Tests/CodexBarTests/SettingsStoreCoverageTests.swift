@@ -962,3 +962,25 @@ struct SettingsStoreCoverageTests {
         return try store.load()
     }
 }
+
+extension SettingsStoreCoverageTests {
+    @Test
+    func `Claude statusLine selection and opt in persist through settings`() {
+        let defaults = InMemoryUserDefaults()
+        let configStore = testConfigStore(suiteName: "Claude-statusline-\(UUID().uuidString)")
+        let settings = Self.makeSettingsStore(userDefaults: defaults, configStore: configStore)
+        #expect(!settings.claudeStatusLineAutoFallback)
+        settings.claudeUsageDataSource = .statusLine
+        settings.claudeStatusLineCachePath = "/tmp/custom-statusline.json"
+        settings.claudeStatusLineAutoFallback = true
+        let reloaded = Self.makeSettingsStore(userDefaults: defaults, configStore: configStore)
+        #expect(reloaded.claudeUsageDataSource == .statusLine)
+        let snapshot = reloaded.claudeSettingsSnapshot(tokenOverride: nil)
+        #expect(snapshot.usageDataSource == .statusLine)
+        #expect(snapshot.statusLineCachePath == "/tmp/custom-statusline.json")
+        #expect(snapshot.statusLineAutoFallback)
+        reloaded.claudeUsageDataSource = .auto
+        #expect(reloaded.claudeUsageDataSource == .auto)
+        #expect(reloaded.claudeStatusLineAutoFallback)
+    }
+}

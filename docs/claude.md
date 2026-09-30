@@ -37,7 +37,46 @@ Incomplete proxy records with an explicit null `stop_reason`, positive input, ze
   [docs/refactor/claude-current-baseline.md](refactor/claude-current-baseline.md).
 
 Usage source picker:
-- Preferences → Providers → Claude → Usage source (Auto/OAuth/Web/CLI).
+- Preferences → Providers → Claude → Usage source (Auto/Admin API/OAuth/Web/CLI/statusLine).
+
+### Claude Code statusLine cache
+
+Select **Claude Code statusLine (local cache)** to read your own statusLine feed without OAuth or Keychain access.
+This source is off by default. Enable **Use statusLine cache in Auto** to append it after the existing sources fail.
+Selected token accounts keep their own credential source; the local feed has no account identity.
+
+The optional **statusLine cache path** accepts a JSON file. Empty checks `~/.codexbar/claude-statusline.json`, then
+`~/.vibe-island/cache/rl.json`. Both the full stdin payload (`rate_limits.five_hour` / `rate_limits.seven_day`) and
+Vibe Island's bare window object are supported. Windows contain `used_percentage` and Unix seconds `resets_at`.
+Missing or expired windows stay unavailable; a weekly-only reading does not fabricate session usage.
+Files older than 30 minutes produce an error. CodexBar's cache also records `updated_at`, so touching it cannot
+refresh old measurements. Claude Code must run again to refresh usage.
+
+The [Claude Code statusLine documentation](https://code.claude.com/docs/en/statusline) describes these fields.
+They require Claude Code v2.1.251 or later and appear after an API response for supported subscription accounts.
+
+From a checkout, install or remove CodexBar's bridge:
+
+```sh
+python3 Scripts/claude_statusline_bridge.py install
+python3 Scripts/claude_statusline_bridge.py uninstall
+```
+
+Python 3 is required. Installation copies the bridge to `~/.codexbar/statusline/bridge.py`, backs up the exact
+`~/.claude/settings.json` bytes beside that file, and replaces only `statusLine` with a wrapper. The wrapper feeds
+the same stdin to the existing command, preserving its output and exit status, including Vibe Island's script.
+Uninstall restores the previous statusLine configuration while keeping unrelated settings edits. If the command
+changed after installation, uninstall refuses to overwrite it; restore the statusLine value from the backup.
+`--home /path/to/test-home` supports isolated installation checks.
+
+To write the cache from an existing wrapper yourself:
+
+```sh
+printf '%s' "$input" | python3 Scripts/claude_statusline_bridge.py cache
+```
+
+`cache --cache-file /path/to/usage.json` changes the output path. Missing `rate_limits` leaves the previous cache
+timestamp intact. Invalid payloads fail softly so the existing statusLine continues running.
 
 Admin API key setup:
 - Preferences → Providers → Claude → Admin API key, stored in `~/.codexbar/config.json`.

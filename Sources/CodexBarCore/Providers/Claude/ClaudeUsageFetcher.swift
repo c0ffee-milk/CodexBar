@@ -563,6 +563,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 return try await self.fetcher.loadViaWebAPI()
             case .cli:
                 return try await self.loadViaCLIWithRetry(model: model)
+            case .statusLine:
+                return try ClaudeStatusLineUsage.load(
+                    cachePath: self.fetcher.configuration.environment["CODEXBAR_CLAUDE_STATUSLINE_CACHE"])
             }
         }
 
@@ -638,6 +641,9 @@ public struct ClaudeUsageFetcher: ClaudeUsageFetching, Sendable {
                 return try await self.fetcher.loadViaWebAPI()
             case .cli:
                 return try await self.loadViaAutoCLI(model: model)
+            case .statusLine:
+                return try ClaudeStatusLineUsage.load(
+                    cachePath: self.fetcher.configuration.environment["CODEXBAR_CLAUDE_STATUSLINE_CACHE"])
             case .auto:
                 throw ClaudeUsageError.parseFailed("Planner emitted invalid auto execution step.")
             }

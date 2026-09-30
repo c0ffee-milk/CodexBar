@@ -977,7 +977,7 @@ extension UsageStore {
             // Explicit OAuth records sourced from the Claude file/cache require a stable account
             // observation before their unavailable-Keychain owner can enter history.
             return true
-        case .api, .web, nil:
+        case .api, .web, .statusLine, nil:
             return false
         }
     }
@@ -1045,6 +1045,7 @@ extension UsageStore {
         case web
         case api
         case oauth
+        case statusLine
 
         init?(sourceLabel: String?) {
             // Provider-specific by design: Claude CLI results historically used both provider and transport labels.
@@ -1057,6 +1058,8 @@ extension UsageStore {
                 self = .api
             case "oauth":
                 self = .oauth
+            case "statusline (user config)", "statusline":
+                self = .statusLine
             default:
                 return nil
             }
@@ -1087,6 +1090,8 @@ extension UsageStore {
                 self = .api
             case .oauth:
                 self = .oauth
+            case .statusLine:
+                self = .statusLine
             case .auto, nil:
                 return nil
             }

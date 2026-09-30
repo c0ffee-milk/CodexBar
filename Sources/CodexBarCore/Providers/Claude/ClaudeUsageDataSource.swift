@@ -6,6 +6,7 @@ public enum ClaudeUsageDataSource: String, CaseIterable, Identifiable, Sendable 
     case oauth
     case web
     case cli
+    case statusLine
 
     public var id: String {
         self.rawValue
@@ -18,6 +19,7 @@ public enum ClaudeUsageDataSource: String, CaseIterable, Identifiable, Sendable 
         case .oauth: "OAuth API"
         case .web: "Web API (cookies)"
         case .cli: "CLI (PTY)"
+        case .statusLine: "Claude Code statusLine (local cache)"
         }
     }
 
@@ -33,6 +35,8 @@ public enum ClaudeUsageDataSource: String, CaseIterable, Identifiable, Sendable 
             "web"
         case .cli:
             "cli"
+        case .statusLine:
+            "statusLine"
         }
     }
 }

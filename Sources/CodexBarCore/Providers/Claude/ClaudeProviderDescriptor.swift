@@ -104,11 +104,14 @@ public enum ClaudeProviderDescriptor {
                     ? .off
                     : context.cookieSettings(for: .claude).cookieSource
                 return ClaudeProviderSettings(
-                    usageDataSource: source,
+                    usageDataSource: context.account == nil && context.config?.claudeStatusLineSelected == true
+                        ? .statusLine : source,
                     webExtrasEnabled: false,
                     cookieSource: cookieSource,
                     manualCookieHeader: routing.manualCookieHeader,
-                    organizationID: context.account?.sanitizedOrganizationID)
+                    organizationID: context.account?.sanitizedOrganizationID,
+                    statusLineAutoFallback: context.config?.claudeStatusLineAutoFallback ?? false,
+                    statusLineCachePath: context.config?.claudeStatusLineCachePath)
             }),
             credentials: self.credentials,
             metadata: ProviderMetadata(
@@ -264,6 +267,9 @@ public enum ClaudeProviderDescriptor {
                 browserDetection: context.browserDetection,
                 hasWebFallback: false)]
         }
+        if context.sourceMode == .auto, context.settings?.claude?.usageDataSource == .statusLine {
+            return [ClaudeStatusLineFetchStrategy()]
+        }
         if context.sourceMode == .api || self.hasAutoAdminAPIKey(context: context) {
             return [ClaudeAdminAPIFetchStrategy()]
         }
@@ -276,6 +282,8 @@ public enum ClaudeProviderDescriptor {
             let strategy: any ProviderFetchStrategy = switch step.dataSource {
             case .api:
                 ClaudeAdminAPIFetchStrategy()
+            case .statusLine:
+                ClaudeStatusLineFetchStrategy()
             case .oauth:
                 ClaudeOAuthFetchStrategy()
             case .web:
@@ -337,7 +345,8 @@ public enum ClaudeProviderDescriptor {
             hasCLI: ClaudeCLIResolver.isAvailable(environment: context.env),
             // App Auto and explicit OAuth perform one real, noninteractive OAuth attempt. Do not preflight here:
             // a preflight can mutate cache state and make the real fetch misclassify a typed error.
-            hasOAuthCredentials: shouldAttemptOAuth)
+            hasOAuthCredentials: shouldAttemptOAuth,
+            statusLineEnabled: context.settings?.claude?.statusLineAutoFallback ?? false)
     }
 
     private static func hasPlausibleWebSession(context: ProviderFetchContext) -> Bool {
@@ -488,7 +497,15 @@ private struct ClaudePlannedFetchStrategy: ProviderFetchStrategy {
     }
 
     func shouldFallback(on error: Error, context: ProviderFetchContext) -> Bool {
-        self.base.shouldFallback(on: error, context: context)
+        if context.sourceMode == .auto,
+           context.settings?.claude?.statusLineAutoFallback == true,
+           self.plannedStep.dataSource != .statusLine,
+           !Task.isCancelled,
+           !ClaudeOAuthFetchError.isCancellation(error)
+        {
+            return true
+        }
+        return self.base.shouldFallback(on: error, context: context)
     }
 }
 

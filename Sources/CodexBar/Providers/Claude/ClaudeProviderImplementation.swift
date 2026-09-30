@@ -19,6 +19,8 @@ struct ClaudeProviderImplementation: ProviderImplementation {
     @MainActor
     func observeSettings(_ settings: SettingsStore) {
         _ = settings.claudeUsageDataSource
+        _ = settings.claudeStatusLineAutoFallback
+        _ = settings.claudeStatusLineCachePath
         _ = settings.claudeWorkspaceSpendEnabled
         _ = settings.claudeAdminAPIKey
         _ = settings.claudeCookieSource
@@ -68,6 +70,7 @@ struct ClaudeProviderImplementation: ProviderImplementation {
         case .oauth: .oauth
         case .web: .web
         case .cli: .cli
+        case .statusLine: .auto
         }
     }
 
@@ -90,6 +93,18 @@ struct ClaudeProviderImplementation: ProviderImplementation {
         let claudeSwapShowSingleAccountBinding = context.binding(\.claudeSwapShowSingleAccount)
 
         return [
+            ProviderSettingsToggleDescriptor(
+                id: "claude-statusline-auto-fallback",
+                title: "Use statusLine cache in Auto",
+                subtitle: "Opt in to your own Claude Code statusLine feed after OAuth, CLI, and Web fail.",
+                binding: context.binding(\.claudeStatusLineAutoFallback),
+                statusText: nil,
+                actions: [],
+                isVisible: nil,
+                isEnabled: nil,
+                onChange: nil,
+                onAppDidBecomeActive: nil,
+                onAppearWhenEnabled: nil),
             ProviderSettingsToggleDescriptor(
                 id: "claude-workspace-spend",
                 title: "Show workspace spend",
@@ -264,6 +279,16 @@ struct ClaudeProviderImplementation: ProviderImplementation {
     @MainActor
     func settingsFields(context: ProviderSettingsContext) -> [ProviderSettingsFieldDescriptor] {
         [
+            ProviderSettingsFieldDescriptor(
+                id: "claude-statusline-cache-path",
+                title: "statusLine cache path",
+                subtitle: "Your Claude Code statusLine JSON feed. Empty checks CodexBar and Vibe Island caches. " +
+                    "Data expires after 30 minutes; missing windows stay unavailable.",
+                kind: .plain,
+                placeholder: "~/.codexbar/claude-statusline.json",
+                binding: context.binding(\.claudeStatusLineCachePath),
+                actions: [],
+                isVisible: nil),
             ProviderSettingsFieldDescriptor(
                 id: "claude-admin-api-key",
                 title: "Admin API key",

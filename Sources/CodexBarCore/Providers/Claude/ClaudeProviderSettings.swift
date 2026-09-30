@@ -6,19 +6,25 @@ public struct ClaudeProviderSettings: Sendable {
     public let cookieSource: ProviderCookieSource
     public let manualCookieHeader: String?
     public let organizationID: String?
+    public let statusLineAutoFallback: Bool
+    public let statusLineCachePath: String?
 
     public init(
         usageDataSource: ClaudeUsageDataSource,
         webExtrasEnabled: Bool,
         cookieSource: ProviderCookieSource,
         manualCookieHeader: String?,
-        organizationID: String? = nil)
+        organizationID: String? = nil,
+        statusLineAutoFallback: Bool = false,
+        statusLineCachePath: String? = nil)
     {
         self.usageDataSource = usageDataSource
         self.webExtrasEnabled = webExtrasEnabled
         self.cookieSource = cookieSource
         self.manualCookieHeader = manualCookieHeader
         self.organizationID = organizationID
+        self.statusLineAutoFallback = statusLineAutoFallback
+        self.statusLineCachePath = statusLineCachePath
     }
 }
 

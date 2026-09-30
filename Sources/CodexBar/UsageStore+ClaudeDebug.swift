@@ -103,6 +103,9 @@ extension UsageStore {
             }
 
             switch strategy.dataSource {
+            case .statusLine:
+                lines.append("User-configured statusLine cache selected; no credential probe.")
+                return lines.joined(separator: "\n")
             case .auto:
                 lines.append("Auto source selected.")
                 return lines.joined(separator: "\n")
